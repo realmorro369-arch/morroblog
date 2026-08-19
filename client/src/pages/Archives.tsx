@@ -1,0 +1,19 @@
+import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
+import { ArrowRight, Eye } from "lucide-react";
+
+export default function Archives() {
+  const [, navigate] = useLocation();
+  const { data: posts, isLoading } = trpc.posts.list.useQuery({ page: 1, limit: 1000 });
+  const groupedPosts = posts?.data?.reduce((acc: Record<string, any[]>, post: any) => {
+    const date = post.publishedAt ? new Date(post.publishedAt) : new Date(post.createdAt);
+    const key = `${date.getFullYear()} 年 ${String(date.getMonth() + 1).padStart(2, "0")} 月`;
+    if (!acc[key]) acc[key] = [];
+    acc[key].push(post);
+    return acc;
+  }, {});
+  const sections = Object.keys(groupedPosts || {}).sort().reverse();
+  const totalViews = posts?.data?.reduce((sum: number, post: any) => sum + (post.viewCount || 0), 0) || 0;
+
+  return <div className="pb-10"><section className="grid overflow-hidden rounded-[1.6rem] border border-white/[0.14] bg-[#202630]/78 px-6 py-10 shadow-xl shadow-black/10 sm:px-10 sm:py-14 lg:grid-cols-12"><div className="lg:col-span-5"><p className="text-sm text-slate-300">文章归档</p><h1 className="display-title mt-4 text-5xl sm:text-6xl">按月份，<br /><span className="display-accent">找回当时的记录。</span></h1></div><div className="mt-7 max-w-lg lg:col-span-5 lg:col-start-8 lg:mt-2"><p className="copy-lede">所有公开文章会按发布时间归到这里。需要回看某段时间研究过什么，可以从月份开始找。</p></div></section>{isLoading ? <div className="grid min-h-72 place-items-center"><p className="text-sm text-slate-300">正在整理归档…</p></div> : sections.length ? <section className="mt-6 grid gap-5">{sections.map((month) => <div key={month} className="rounded-2xl border border-white/[0.13] bg-[#202630]/64 p-5 shadow-lg shadow-black/10 sm:p-6"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-medium text-[#d6fbfc]">{month}</h2><span className="rounded-full bg-[#bce8eb]/14 px-3 py-1.5 text-xs text-[#d6fbfc]">{groupedPosts?.[month]?.length || 0} 篇</span></div><div className="grid gap-2">{groupedPosts?.[month]?.map((post: any) => <button key={post.id} type="button" onClick={() => navigate(`/posts/${post.slug}`)} className="group grid rounded-xl border border-transparent px-3 py-4 text-left transition-colors hover:border-[#bce8eb]/30 hover:bg-white/[0.055] sm:grid-cols-[minmax(0,1fr)_auto] sm:items-center sm:gap-5" aria-label={`阅读文章：${post.title}`}><div className="min-w-0"><h3 className="truncate text-lg font-medium text-white transition-colors group-hover:text-[#d6fbfc]">{post.title}</h3><p className="mt-1 line-clamp-1 text-sm leading-6 text-slate-300">{post.excerpt || "作者没有填写摘要。"}</p></div><div className="mt-3 flex items-center gap-4 text-sm text-slate-400 sm:mt-0"><span className="flex items-center gap-1.5"><Eye size={13} />{post.viewCount || 0}</span><ArrowRight size={15} className="transition-transform group-hover:translate-x-1 group-hover:text-[#bce8eb]" /></div></button>)}</div></div>)}</section> : <section className="mt-6 grid min-h-80 place-items-center rounded-2xl border border-dashed border-white/[0.16] bg-[#202630]/52 px-5 text-center"><div><p className="text-sm font-medium text-slate-200">归档暂时是空的</p><p className="mt-3 text-sm text-slate-400">等有公开文章后，这里会按发布时间自动整理。</p></div></section>}<section className="mt-6 grid gap-4 sm:grid-cols-3"><div className="rounded-2xl border border-white/[0.12] bg-white/[0.035] p-4"><p className="text-sm text-slate-300">已归档文章</p><p className="mt-2 text-2xl font-medium text-white">{posts?.data?.length || 0}</p></div><div className="rounded-2xl border border-white/[0.12] bg-white/[0.035] p-4"><p className="text-sm text-slate-300">涉及月份</p><p className="mt-2 text-2xl font-medium text-white">{sections.length}</p></div><div className="rounded-2xl border border-white/[0.12] bg-white/[0.035] p-4"><p className="text-sm text-slate-300">累计阅读</p><p className="mt-2 text-2xl font-medium text-white">{totalViews}</p></div></section></div>;
+}

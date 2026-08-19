@@ -1,0 +1,25 @@
+import { useAuth } from "@/_core/hooks/useAuth";
+import { trpc } from "@/lib/trpc";
+import { useLocation } from "wouter";
+import { Button } from "@/components/ui/button";
+import { ArrowUpRight, FileText, Pencil, Plus } from "lucide-react";
+
+function formatDate(value: Date | string | null | undefined) {
+  return value ? new Date(value).toLocaleDateString("zh-CN", { year: "numeric", month: "2-digit", day: "2-digit" }) : "未发布";
+}
+
+export default function PostWorkspace() {
+  const { isAuthenticated, loading: isAuthLoading } = useAuth();
+  const [, navigate] = useLocation();
+  const { data, isLoading } = trpc.posts.myPosts.useQuery({ page: 1, limit: 100 }, { enabled: isAuthenticated });
+  const posts = data?.data || [];
+  const drafts = posts.filter((post: any) => post.status === "draft");
+  const published = posts.filter((post: any) => post.status === "published");
+
+  if (isAuthLoading) return <div className="grid min-h-[55vh] place-items-center"><p className="text-sm text-slate-300">正在打开你的文章…</p></div>;
+  if (!isAuthenticated) return <div className="grid min-h-[55vh] place-items-center text-center"><div className="rounded-3xl border border-white/[0.14] bg-[#222832]/78 px-7 py-10 shadow-xl shadow-black/10"><p className="text-sm text-slate-300">登录后才能查看和编辑自己的文章</p><h1 className="display-title mt-4 text-4xl">草稿与已发布文章，<br />都会放在这里。</h1><Button onClick={() => navigate("/")} className="editorial-button mt-7 px-5">返回首页登录</Button></div></div>;
+
+  const renderPosts = (entries: any[], mode: "draft" | "published") => entries.length ? <div className="mt-4 grid gap-3">{entries.map((post: any) => <article key={post.id} className="rounded-2xl border border-white/[0.12] bg-white/[0.035] p-4 transition-colors hover:border-[#bce8eb]/45 hover:bg-white/[0.06]"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><p className={`text-xs ${mode === "draft" ? "text-[#f3c18a]" : "text-slate-400"}`}>{mode === "draft" ? "草稿 · 仅你自己可见" : `发布于 ${formatDate(post.publishedAt)}`}</p><h2 className="mt-2 truncate text-lg font-medium text-white">{post.title}</h2><p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-300">{post.excerpt || (mode === "draft" ? "尚未填写摘要。" : "作者没有填写摘要。")}</p></div></div><div className="mt-4 flex flex-wrap gap-2"><Button onClick={() => navigate(`/edit/${post.id}`)} variant="ghost" className="h-9 px-2.5 text-xs text-[#bce8eb] hover:bg-white/[0.08] hover:text-white"><Pencil size={13} className="mr-1.5" />继续编辑</Button>{mode === "published" && <Button onClick={() => navigate(`/posts/${post.slug}`)} variant="ghost" className="h-9 px-2.5 text-xs text-slate-300 hover:bg-white/[0.08] hover:text-[#bce8eb]">查看文章<ArrowUpRight size={13} className="ml-1.5" /></Button>}</div></article>)}</div> : <div className="mt-4 grid min-h-40 place-items-center rounded-2xl border border-dashed border-white/[0.16] bg-white/[0.025] px-5 text-center"><p className="text-sm text-slate-400">{mode === "draft" ? "目前没有草稿。" : "目前没有已发布文章。"}</p></div>;
+
+  return <div className="pb-10"><section className="grid overflow-hidden rounded-[1.6rem] border border-white/[0.14] bg-[#202630]/78 px-6 py-10 shadow-xl shadow-black/10 sm:px-10 sm:py-14 lg:grid-cols-12"><div className="lg:col-span-7"><p className="text-sm text-slate-300">我的文章</p><h1 className="display-title mt-4 text-5xl sm:text-6xl">写到一半的，<br /><span className="display-accent">也别丢掉。</span></h1></div><div className="mt-7 max-w-md lg:col-span-4 lg:col-start-9 lg:mt-2"><p className="copy-lede">草稿只对你可见；发布后的文章也会留在这里，方便回看或继续修改。</p><Button onClick={() => navigate("/create")} className="editorial-button editorial-button-primary mt-6 px-4"><Plus size={15} className="mr-1.5" />新建文章</Button></div></section>{isLoading ? <div className="grid min-h-64 place-items-center"><p className="text-sm text-slate-300">正在读取你的文章…</p></div> : <div className="mt-6 grid gap-6 lg:grid-cols-2"><section className="rounded-2xl border border-white/[0.13] bg-[#202630]/64 p-5 shadow-lg shadow-black/10 sm:p-6"><div className="flex items-end justify-between"><div><p className="text-sm text-slate-300">草稿</p><h2 className="mt-2 text-2xl font-medium text-white">继续写</h2></div><span className="rounded-full bg-[#f3c18a]/14 px-3 py-1.5 text-sm text-[#ffd6a9]">{drafts.length} 篇</span></div>{renderPosts(drafts, "draft")}</section><section className="rounded-2xl border border-white/[0.13] bg-[#202630]/64 p-5 shadow-lg shadow-black/10 sm:p-6"><div className="flex items-end justify-between"><div><p className="text-sm text-slate-300">已发布</p><h2 className="mt-2 text-2xl font-medium text-white">公开文章</h2></div><span className="rounded-full bg-[#bce8eb]/14 px-3 py-1.5 text-sm text-[#d6fbfc]">{published.length} 篇</span></div>{renderPosts(published, "published")}</section></div>}<div className="mt-6"><button onClick={() => navigate("/posts")} className="flex items-center gap-2 rounded-lg px-2 py-2 text-sm text-slate-300 transition-colors hover:bg-white/[0.08] hover:text-[#bce8eb]"><FileText size={15} />查看公开文章</button></div></div>;
+}
